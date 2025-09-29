@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Vehicle Form</title>
+<style>
+  body {font-family: Arial, sans-serif; background:linear-gradient(120deg,#89f7fe,#66a6ff); margin:0; padding:20px;}
+  form {background:#fff; padding:20px; border-radius:12px; max-width:600px; margin:auto; box-shadow:0 6px 12px rgba(0,0,0,0.15);}
+  h1 {text-align:center; color:#333;}
+  input, select {width:100%; padding:10px; margin:8px 0; border:1px solid #ccc; border-radius:6px;}
+  button {padding:8px 12px; margin:2px; background:#007bff; color:#fff; border:none; border-radius:6px; cursor:pointer;}
+  button:hover{opacity:0.8;}
+  table {width:100%; border-collapse:collapse; margin-top:20px; background:#fff;}
+  th, td {border:1px solid #ccc; padding:8px; text-align:center;}
+  th {background:#007bff; color:#fff;}
+</style>
+</head>
+<body>
+<h1>🚘 Vehicle Registration Form</h1>
+<form id="vehicleForm">
+  <input type="text" placeholder="Name" required id="name">
+  <input type="text" placeholder="Address" required id="address">
+  <input type="number" placeholder="Age" required id="age">
+  <input type="text" placeholder="Contact No" required id="contact">
+  <input type="text" placeholder="Aadhaar" required id="aadhaar">
+  <select id="vehicleType">
+    <option>Bajaj CNG</option><option>TVS CNS</option>
+    <option>Bajaj Diesel</option><option>TVS Diesel</option>
+    <option>EV</option><option>Electrical</option>
+  </select>
+  <input type="text" placeholder="Vehicle No" required id="vehicleNo">
+  <select id="vehicleModel">
+    <option>2020</option><option>2021</option><option>2022</option>
+    <option>2023</option><option>2024</option><option>2025</option>
+  </select>
+  <button type="submit">Submit</button>
+  <button type="reset" style="background:#6c757d;">Reset</button>
+</form>
+
+<h2 style="text-align:center; margin-top:30px;">📋 Submitted Records</h2>
+<table id="recordsTable">
+  <thead>
+    <tr>
+      <th>Name</th><th>Contact</th><th>Vehicle</th><th>Model</th><th>Actions</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+const scriptURL = "https://script.google.com/macros/s/AKfycbzxMA03pFnOmkv9NuOx853k94C1CzRnWktsO9c0PdRKA_aBGjgPHdrixxJ49vSn91NqzA/exec";  // Replace with your Google Apps Script URL
+
+// Token Validation (24 hrs link)
+let params = new URLSearchParams(window.location.search);
+let token = params.get('token');
+let todayKey = new Date().toISOString().split('T')[0];
+if(token!==btoa(todayKey)){
+  document.body.innerHTML = '<h2 style="text-align:center;color:red;">❌ Link expired or invalid!</h2>';
+}
+
+// Submit handler
+document.getElementById('vehicleForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  let record = {
+    id: Date.now(),
+    name:document.getElementById('name').value,
+    address:document.getElementById('address').value,
+    age:document.getElementById('age').value,
+    contact:document.getElementById('contact').value,
+    aadhaar:document.getElementById('aadhaar').value,
+    vehicleType:document.getElementById('vehicleType').value,
+    vehicleNo:document.getElementById('vehicleNo').value,
+    vehicleModel:document.getElementById('vehicleModel').value
+  };
+
+  await fetch(scriptURL, {
+    method: "POST",
+    body: JSON.stringify(record),
+    headers: { "Content-Type": "application/json" }
+  });
+
+  alert('✅ Form submitted successfully!');
+  document.getElementById('vehicleForm').reset();
+  loadRecords();
+});
+
+// Load data from Google Sheet
+async function loadRecords(){
+  let res = await fetch(scriptURL + "?action=getData");
+  let data = await res.json();
+  let tbody = document.querySelector("#recordsTable tbody");
+  tbody.innerHTML = "";
+  data.slice(1).forEach((row, i) => {
+    let tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${row[1]}</td>
+      <td>${row[4]}</td>
+      <td>${row[6]}</td>
+      <td>${row[8]}</td>
+      <td>
+        <button onclick="editRecord(${i+2}, '${row[1]}','${row[4]}','${row[6]}','${row[8]}')">✏️ Edit</button>
+        <button onclick="deleteRecord(${i+2})" style="background:#dc3545;">🗑 Delete</button>
+        <button onclick="printRecord('${row[1]}','${row[4]}','${row[6]}','${row[8]}')" style="background:#28a745;">🖨 Print</button>
+        <button onclick="shareRecord('${row[1]}','${row[4]}')">🔗 Share</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// Delete record
+async function deleteRecord(row){
+  await fetch(scriptURL + "?action=delete&row=" + row);
+  alert("🗑 Record Deleted");
+  loadRecords();
+}
+
+// Edit (simple prompt)
+function editRecord(row, name, contact, vehicle, model){
+  let newName = prompt("Update Name:", name);
+  if(!newName) return;
+  alert("✏️ Edit option update logic should go in Apps Script (advanced)");
+}
+
+// Print
+function printRecord(name, contact, vehicle, model){
+  let w = window.open("");
+  w.document.write(`<h2>Vehicle Record</h2>
+    <p><b>Name:</b> ${name}</p>
+    <p><b>Contact:</b> ${contact}</p>
+    <p><b>Vehicle:</b> ${vehicle}</p>
+    <p><b>Model:</b> ${model}</p>`);
+  w.print();
+}
+
+// Share
+function shareRecord(name, contact){
+  let msg = `Customer: ${name}, Contact: ${contact}`;
+  navigator.clipboard.writeText(msg);
+  alert("🔗 Record copied for sharing!");
+}
+
+// On load
+loadRecords();
+</script>
+</body>
+</html>

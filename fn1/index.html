@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard</title>
+<style>
+  body{font-family:Arial,sans-serif; background:linear-gradient(135deg,#fbc2eb,#a6c1ee); margin:0; padding:20px;}
+  h1{text-align:center;}
+  button{padding:10px 20px; margin:5px; border:none; border-radius:6px; cursor:pointer;}
+  .generate{background:#28a745;color:#fff;}
+  .export{background:#17a2b8;color:#fff;}
+  table{width:100%; border-collapse:collapse; margin-top:20px; background:#fff;}
+  th,td{border:1px solid #ccc; padding:8px; text-align:center;}
+  th{background:#007bff;color:#fff;}
+</style>
+</head>
+<body>
+<h1>🔐 Admin Dashboard</h1>
+<div style="text-align:center;margin-bottom:20px;">
+  <button class="generate" onclick="generateLink()">Generate Daily Link</button>
+  <input type="text" id="generatedLink" readonly style="width:60%;padding:8px;">
+  <button onclick="copyLink()">Copy</button>
+  <button class="export" onclick="exportCSV()">Export CSV</button>
+</div>
+<input type="text" id="search" placeholder="Search by Name, Aadhaar, Contact" style="width:100%;padding:10px;">
+<table id="recordsTable">
+  <thead>
+    <tr>
+      <th>Name</th><th>Address</th><th>Age</th><th>Contact</th><th>Aadhaar</th>
+      <th>Vehicle Type</th><th>Vehicle No</th><th>Model</th><th>Actions</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+<script>
+// password protection
+let pass = prompt("Enter Admin Password:");
+if(pass !== "somu123"){
+  alert("❌ Wrong Password!");
+  document.body.innerHTML = "<h2 style='color:red;text-align:center;'>Access Denied</h2>";
+}
+
+// generate link
+function generateLink(){
+  let todayKey = new Date().toISOString().split('T')[0];
+  let token = btoa(todayKey);
+  let link = window.location.origin + window.location.pathname.replace("admin.html","form.html") + "?token="+token;
+  document.getElementById('generatedLink').value = link;
+}
+// copy link
+function copyLink(){
+  let input = document.getElementById('generatedLink');
+  input.select(); document.execCommand("copy");
+  alert("✅ Link copied!");
+}
+
+// load data
+function loadRecords(){
+  let records = JSON.parse(localStorage.getItem('records')||'[]');
+  let tbody = document.querySelector("#recordsTable tbody");
+  tbody.innerHTML = "";
+  records.forEach((rec,idx)=>{
+    let tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${rec.name}</td><td>${rec.address}</td><td>${rec.age}</td>
+      <td>${rec.contact}</td><td>${rec.aadhaar}</td><td>${rec.vehicleType}</td>
+      <td>${rec.vehicleNo}</td><td>${rec.vehicleModel}</td>
+      <td>
+        <button onclick="editRecord(${rec.id})">✏️ Edit</button>
+        <button onclick="deleteRecord(${rec.id})">🗑️ Delete</button>
+        <button onclick="downloadRecord(${rec.id})">⬇️ Download</button>
+        <button onclick="printRecord(${rec.id})">🖨️ Print</button>
+        <button onclick="shareRecord(${rec.id})">🔗 Share</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// edit
+function editRecord(id){
+  let records = JSON.parse(localStorage.getItem('records')||'[]');
+  let rec = records.find(r=>r.id===id);
+  if(rec){
+    let newName = prompt("Edit Name:",rec.name);
+    if(newName!==null) rec.name = newName;
+    localStorage.setItem('records', JSON.stringify(records));
+    loadRecords();
+  }
+}
+// delete
+function deleteRecord(id){
+  let records = JSON.parse(localStorage.getItem('records')||'[]');
+  records = records.filter(r=>r.id!==id);
+  localStorage.setItem('records', JSON.stringify(records));
+  loadRecords();
+}
+// download
+function downloadRecord(id){
+  let records = JSON.parse(localStorage.getItem('records')||'[]');
+  let rec = records.find(r=>r.id===id);
+  let blob = new Blob([JSON.stringify(rec,null,2)],{type:"application/json"});
+  let a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = rec.name+"_record.json";
+  a.click();
+}
+// print
+function printRecord(id){
+  let records = JSON.parse(localStorage.getItem('records')||'[]');
+  let rec = records.find(r=>r.id===id);
+  let printWin = window.open("");
+  printWin.document.write("<pre>"+JSON.stringify(rec,null,2)+"</pre>");
+  printWin.print();
+}
+// share
+function shareRecord(id){
+  let records = JSON.parse(localStorage.getItem('records')||'[]');
+  let rec = records.find(r=>r.id===id);
+  let text = JSON.stringify(rec,null,2);
+  navigator.clipboard.writeText(text).then(()=>alert("✅ Record copied to clipboard!"));
+}
+
+// export CSV
+function exportCSV(){
+  let records = JSON.parse(localStorage.getItem('records')||'[]');
+  let csv = "Name,Address,Age,Contact,Aadhaar,VehicleType,VehicleNo,Model\n";
+  records.forEach(r=>{
+    csv += `${r.name},${r.address},${r.age},${r.contact},${r.aadhaar},${r.vehicleType},${r.vehicleNo},${r.vehicleModel}\n`;
+  });
+  let blob = new Blob([csv],{type:"text/csv"});
+  let a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "records.csv";
+  a.click();
+}
+
+// search
+document.getElementById('search').addEventListener('input', function(){
+  let term = this.value.toLowerCase();
+  let rows = document.querySelectorAll("#recordsTable tbody tr");
+  rows.forEach(row=>{
+    row.style.display = row.innerText.toLowerCase().includes(term)?"":"none";
+  });
+});
+
+loadRecords();
+</script>
+</body>
+</html>
