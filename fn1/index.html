@@ -45,7 +45,7 @@ if(pass !== "somu123"){
 function generateLink(){
   let todayKey = new Date().toISOString().split('T')[0];
   let token = btoa(todayKey);
-  let link = window.location.origin + https://somasekhar420.github.io/vehicles-owners-data/fn1/.replace("admin.html","form.html") + "?token="+token;
+  let link = window.location.origin + window.location.pathname.replace("admin.html","form.html") + "?token="+token;
   document.getElementById('generatedLink').value = link;
 }
 // copy link
